@@ -1,0 +1,53 @@
+lib = library(identifier: 'jenkins@20211123', retriever: legacySCM(scm))
+
+pipeline {
+    agent {
+        defaultReleaseDockerAgent()
+    }
+    parameters {
+        string(name: 'DistManifestUrl', description: 'Where the manifest is stored')
+    }
+    stages {
+        stage('Sign/Release Artifacts') {
+            steps {
+                downloadArtifactsFromManifest(manifestUrl: params.DistManifestUrl)
+
+                // Signing workflow
+                signArtifacts(
+                    artifactsPath: 'build',
+                    signatureType: '.sig',
+                    distributionPlatform: 'linux',
+                )
+                
+                // Replace with publishToMaven(...)
+                withCredentials([usernamePassword(credentialsId: 'Sonatype', usernameVariable: 'SONATYPE_USERNAME', passwordVariable: 'SONATYPE_PASSWORD')]) {
+                    sh('$WORKSPACE/publish/publish-snapshot.sh $WORKSPACE/builds/opensearch/maven')
+                }
+
+                // Replace with publishToArtifactRepositry(...)
+                withAWS(role: "${ARTIFACT_PROMOTION_ROLE_NAME}", roleAccount: "${AWS_ACCOUNT_ARTIFACT}", duration: 900, roleSessionName: 'jenkins-session') {
+                    s3Upload(file: 'distribution/', bucket: "${ARTIFACT_PRODUCTION_BUCKET_NAME}", path: "${distManifest.product}/${distManifest.version}/")
+                }
+            }
+        }
+        stage('Docker Release') {
+            steps {
+                def distManifest = lib.DistManifest.from(url: params.DistManifestUrl)
+
+                copyDockerImage(
+                       sourceImagePath: distManifest.dockerImage,
+                        destinationImagePath: "opensearchproject/${distManifest.product}:${distManifest.version}",
+                        destinationType: "docker",
+                        destinationCredentialIdentifier: "jenkins-staging-docker-prod-token"
+                )
+            }
+        }
+    }
+    post {
+        always {
+            script {
+                postCleanUp() // Update to also do docker cleanup too
+            }
+        }
+    }
+}
