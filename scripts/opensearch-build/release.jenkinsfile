@@ -88,7 +88,7 @@ def fakeDownloadArtifacts(FakeDistManifest manifest) {
 }
 
 def fakeSignArtifacts(Map args) {
-    echo "fakeDownloadArtifacts ${args}"
+    echo "fakeSignArtifacts ${args}"
 }
 
 def fakePublishToMaven(Map args) {
