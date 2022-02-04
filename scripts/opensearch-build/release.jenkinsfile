@@ -58,7 +58,7 @@ class FakeDistManifest implements Serializable {
     String product
     String version
     FakeDistManifest(Map data) {
-        echo "new DisManifest: ${data}"
+        println "new DisManifest: ${data}"
         this.artifacts = new Artifacts(data?.artifacts)
         this.product = data?.product
         this.version = data?.product
