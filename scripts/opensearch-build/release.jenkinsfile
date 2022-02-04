@@ -23,28 +23,34 @@ standardReleasePipeline(config) {
 
     def downloadPath = fakeDownloadArtifacts(distManifest)
 
-    // Signing workflow
     fakeSignArtifacts(
         artifactsPath: downloadPath,
         signatureType: '.sig',
         distributionPlatform: 'linux',
     )
     
-    // Replace with publishToMaven(...)
-    fakeWithCredentials {
-        sh('$WORKSPACE/publish/publish-snapshot.sh $WORKSPACE/dist/${distManifest.product}/maven')
-    }
+    fakePublishToMaven(
+        mavenArtifactsPath: "${downloadPath}/maven",
+        autoPublish: true
+    )
 
-    // Replace with publishToArtifactRepositry(...)
-    fakeWithAWS {
-        s3Upload(file: 'distribution/', bucket: "${ARTIFACT_PRODUCTION_BUCKET_NAME}", path: "${distManifest.product}/${distManifest.version}/")
+    fakePublishToArtifactRepositry {
+        productName: distManifest.product,
+        version: distManifest.version,
     }
 
     fakeCopyDockerImage(
         sourceImagePath: distManifest.artifacts.containerReference,
         destinationImagePath: "opensearchproject/${distManifest.product}:${distManifest.version}",
         destinationType: "docker",
-        destinationCredentialIdentifier: "jenkins-staging-docker-prod-token"
+        destinationCredentialIdentifier: "opensearch-docker-prod"
+    )
+
+    fakeCopyDockerImage(
+        sourceImagePath: distManifest.artifacts.containerReference,
+        destinationImagePath: "opensearchproject/${distManifest.product}:${distManifest.version}",
+        destinationType: "ecr",
+        destinationCredentialIdentifier: "opensearch-ecr-prod"
     )
 }
 
@@ -79,19 +85,18 @@ Map fakeYmlFromUrl(String url) {
 
 def fakeDownloadArtifacts(FakeDistManifest manifest) {
     echo "fakeDownloadArtifacts"
-
 }
 
 def fakeSignArtifacts(Map args) {
     echo "fakeDownloadArtifacts ${args}"
 }
 
-def fakeWithCredentials(Closure closure) {
-    echo "fakeWithCredentials, not running inner closure"
+def fakePublishToMaven(Map args) {
+    echo "fakePublishToMaven ${args}"
 }
 
-def fakeWithAWS(Closure closure) {
-    echo "fakeWithAWS, not running inner closure"
+def fakePublishToArtifactRepositry(Map args) {
+    echo "fakePublishToArtifactRepositry ${args}"
 }
 
 def fakeCopyDockerImage(Map args) {
