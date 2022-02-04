@@ -14,11 +14,11 @@ lib = library(
         ])
     )
 
-Map args = [
+Map config = [
     cleanup: { -> echo "Totally unneed clean for demo purposes"}
 ]
 
-standardReleasePipeline() {
+standardReleasePipeline(config) {
     def distManifest = new FakeDistManifest(fakeYmlFromUrl(params.DistManifestUrl))
 
     def downloadPath = fakeDownloadArtifacts(distManifest)
