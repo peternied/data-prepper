@@ -20,7 +20,7 @@ standardReleasePipeline {
     def downloadPath = fakeDownloadArtifacts(distManifest)
 
     // Signing workflow
-    signArtifacts(
+    fakeSignArtifacts(
         artifactsPath: downloadPath,
         signatureType: '.sig',
         distributionPlatform: 'linux',
