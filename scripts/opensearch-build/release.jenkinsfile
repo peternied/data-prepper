@@ -27,7 +27,7 @@ standardReleasePipeline {
     )
     
     // Replace with publishToMaven(...)
-    fakeWithCredentials([usernamePassword(credentialsId: 'Sonatype', usernameVariable: 'SONATYPE_USERNAME', passwordVariable: 'SONATYPE_PASSWORD')]) {
+    fakeWithCredentials {
         sh('$WORKSPACE/publish/publish-snapshot.sh $WORKSPACE/dist/${distManifest.product}/maven')
     }
 
