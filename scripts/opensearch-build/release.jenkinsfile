@@ -14,7 +14,11 @@ lib = library(
         ])
     )
 
-standardReleasePipeline {
+Map args = [
+    cleanup: { -> echo "Totally unneed clean for demo purposes"}
+]
+
+standardReleasePipeline() {
     def distManifest = new FakeDistManifest(fakeYmlFromUrl(params.DistManifestUrl))
 
     def downloadPath = fakeDownloadArtifacts(distManifest)
@@ -43,6 +47,9 @@ standardReleasePipeline {
         destinationCredentialIdentifier: "jenkins-staging-docker-prod-token"
     )
 }
+
+/////////////////////////////////////////////////////////////////////////////////////
+// Fakes were written to make sure POC could be executed against jenkins environment
 
 class FakeDistManifest implements Serializable {
     // Additional contents need to be added to the dist manifest for
