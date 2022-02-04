@@ -79,11 +79,11 @@ def fakeSignArtifacts(Map args) {
     echo "fakeDownloadArtifacts ${args}"
 }
 
-def fakeWithCredentials(Map args, Closure closure) {
+def fakeWithCredentials(Closure closure) {
     echo "fakeWithCredentials, not running inner closure"
 }
 
-def fakeWithAWS(Map args, Closure closure) {
+def fakeWithAWS(Closure closure) {
     echo "fakeWithAWS, not running inner closure"
 }
 
