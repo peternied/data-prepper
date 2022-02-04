@@ -34,10 +34,10 @@ standardReleasePipeline(config) {
         autoPublish: true
     )
 
-    fakePublishToArtifactRepositry {
+    fakePublishToArtifactRepositry(
         productName: distManifest.product,
         version: distManifest.version,
-    }
+    )
 
     fakeCopyDockerImage(
         sourceImagePath: distManifest.artifacts.containerReference,
