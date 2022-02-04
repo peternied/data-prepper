@@ -14,7 +14,7 @@ lib = library(
         ])
     )
 
-defaultPipeline {
+standardReleasePipeline {
     def distManifest = new FakeDistManifest(fakeYmlFromUrl(params.DistManifestUrl))
 
     def downloadPath = fakeDownloadArtifacts(distManifest)
