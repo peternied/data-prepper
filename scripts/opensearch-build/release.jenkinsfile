@@ -1,53 +1,92 @@
-lib = library(identifier: 'jenkins@20211123', retriever: legacySCM(scm))
+properties([
+  parameters([
+    string(
+        name: 'DistManifestUrl',
+        description: 'The url to distribution manifest for this release')])
+])
 
-pipeline {
-    agent {
-        defaultReleaseDockerAgent()
+lib = library(
+    identifier: 'jenkins@uni-poc',
+    retriever:modernSCM(
+        [$class: 'GitSCMSource',
+        remote: 'https://github.com/peternied/opensearch-build.git',
+        traits: [gitBranchDiscovery()]
+        ])
+    )
+
+defaultPipeline {
+    def distManifest = new FakeDistManifest(fakeYmlFromUrl(params.DistManifestUrl))
+
+    def downloadPath = fakeDownloadArtifacts(distManifest)
+
+    // Signing workflow
+    signArtifacts(
+        artifactsPath: downloadPath,
+        signatureType: '.sig',
+        distributionPlatform: 'linux',
+    )
+    
+    // Replace with publishToMaven(...)
+    fakeWithCredentials([usernamePassword(credentialsId: 'Sonatype', usernameVariable: 'SONATYPE_USERNAME', passwordVariable: 'SONATYPE_PASSWORD')]) {
+        sh('$WORKSPACE/publish/publish-snapshot.sh $WORKSPACE/dist/${distManifest.product}/maven')
     }
-    parameters {
-        string(name: 'DistManifestUrl', description: 'Where the manifest is stored')
+
+    // Replace with publishToArtifactRepositry(...)
+    fakeWithAWS(role: "${ARTIFACT_PROMOTION_ROLE_NAME}", roleAccount: "${AWS_ACCOUNT_ARTIFACT}", duration: 900, roleSessionName: 'jenkins-session') {
+        s3Upload(file: 'distribution/', bucket: "${ARTIFACT_PRODUCTION_BUCKET_NAME}", path: "${distManifest.product}/${distManifest.version}/")
     }
-    stages {
-        stage('Sign/Release Artifacts') {
-            steps {
-                downloadArtifactsFromManifest(manifestUrl: params.DistManifestUrl)
 
-                // Signing workflow
-                signArtifacts(
-                    artifactsPath: 'build',
-                    signatureType: '.sig',
-                    distributionPlatform: 'linux',
-                )
-                
-                // Replace with publishToMaven(...)
-                withCredentials([usernamePassword(credentialsId: 'Sonatype', usernameVariable: 'SONATYPE_USERNAME', passwordVariable: 'SONATYPE_PASSWORD')]) {
-                    sh('$WORKSPACE/publish/publish-snapshot.sh $WORKSPACE/builds/opensearch/maven')
-                }
+    fakeCopyDockerImage(
+        sourceImagePath: distManifest.artifacts.containerReference,
+        destinationImagePath: "opensearchproject/${distManifest.product}:${distManifest.version}",
+        destinationType: "docker",
+        destinationCredentialIdentifier: "jenkins-staging-docker-prod-token"
+    )
+}
 
-                // Replace with publishToArtifactRepositry(...)
-                withAWS(role: "${ARTIFACT_PROMOTION_ROLE_NAME}", roleAccount: "${AWS_ACCOUNT_ARTIFACT}", duration: 900, roleSessionName: 'jenkins-session') {
-                    s3Upload(file: 'distribution/', bucket: "${ARTIFACT_PRODUCTION_BUCKET_NAME}", path: "${distManifest.product}/${distManifest.version}/")
-                }
-            }
+class FakeDistManifest implements Serializable {
+    // Additional contents need to be added to the dist manifest for
+    // these parameters
+    class Artifacts implements Serializable {
+        String containerReference
+        Artifacts(Map data) {
+            this.containerReference = data?.containerReference
         }
-        stage('Docker Release') {
-            steps {
-                def distManifest = lib.DistManifest.from(url: params.DistManifestUrl)
+    }
 
-                copyDockerImage(
-                       sourceImagePath: distManifest.dockerImage,
-                        destinationImagePath: "opensearchproject/${distManifest.product}:${distManifest.version}",
-                        destinationType: "docker",
-                        destinationCredentialIdentifier: "jenkins-staging-docker-prod-token"
-                )
-            }
-        }
+    Artifacts artifacts
+    String product
+    String version
+    FakeDistManifest(Map data) {
+        echo "new DisManifest: ${data}"
+        this.artifacts = new Artifacts(data?.artifacts)
+        this.product = data?.product
+        this.version = data?.product
     }
-    post {
-        always {
-            script {
-                postCleanUp() // Update to also do docker cleanup too
-            }
-        }
-    }
+}
+
+Map fakeYmlFromUrl(String url) {
+    echo "ymlFromUrl: ${url}"
+    return [:]
+}
+
+def fakeDownloadArtifacts(FakeDistManifest manifest) {
+    echo "fakeDownloadArtifacts"
+
+}
+
+def fakeSignArtifacts(Map args) {
+    echo "fakeDownloadArtifacts ${args}"
+}
+
+def fakeWithCredentials(Map args, Closure closure) {
+    echo "fakeWithCredentials, not running inner closure"
+}
+
+def fakeWithAWS(Map args, Closure closure) {
+    echo "fakeWithAWS, not running inner closure"
+}
+
+def fakeCopyDockerImage(Map args) {
+    echo "fakeCopyDockerImage ${args}"
 }
