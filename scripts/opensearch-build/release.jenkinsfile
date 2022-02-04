@@ -32,7 +32,7 @@ standardReleasePipeline {
     }
 
     // Replace with publishToArtifactRepositry(...)
-    fakeWithAWS(role: 'ARTIFACT_PROMOTION_ROLE_NAME', roleAccount: 'AWS_ACCOUNT_ARTIFACT', duration: 900, roleSessionName: 'jenkins-session') {
+    fakeWithAWS {
         s3Upload(file: 'distribution/', bucket: "${ARTIFACT_PRODUCTION_BUCKET_NAME}", path: "${distManifest.product}/${distManifest.version}/")
     }
 
